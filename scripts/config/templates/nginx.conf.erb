@@ -43,7 +43,7 @@ http {
   <% end %>
 
     location /services/api/v1 {
-    proxy_pass http://localhost:1337;
+    proxy_pass http://collect-beta-api.collect-beta-api;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-for $remote_addr;
@@ -52,7 +52,7 @@ http {
 
   # Include the basic h5bp config set
   location /api/v1 {
-    proxy_pass http://localhost:1337;
+    proxy_pass http://collect-beta-api.collect-beta-api;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-for $remote_addr;
