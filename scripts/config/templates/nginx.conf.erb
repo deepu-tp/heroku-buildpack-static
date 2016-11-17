@@ -42,68 +42,40 @@ http {
     error_page 404 500 /<%= error_page %>;
   <% end %>
 
-    location / {
-      mruby_post_read_handler /app/bin/config/lib/ngx_mruby/headers.rb cache;
-      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
-    <% if clean_urls %>
-      try_files $uri $uri/ $uri.html $fallback;
-    <% else %>
-      try_files $uri $uri/ $fallback;
-    <% end %>
-    }
-
-  <% if clean_urls %>
-    location ~ \.html$ {
-      try_files $uri =404;
-    }
-  <% end %>
-
-  <% if https_only %>
-    if ($http_x_forwarded_proto != "https") {
-      return 301 https://$host$request_uri;
-    }
-  <% end %>
-
-  <% routes.each do |route, path| %>
-    location ~ ^<%= route %>$ {
-      set $route <%= route %>;
-      mruby_set $path /app/bin/config/lib/ngx_mruby/routes_path.rb cache;
-      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
-    <% if clean_urls %>
-      try_files $uri $uri/ /$uri.html $path $fallback;
-    <% else %>
-      try_files $uri $path $fallback;
-    <% end %>
-    }
-  <% end %>
-
-  <% proxies.each do |location, hash| %>
-    location <%= location %> {
-      proxy_pass_request_headers on;
-      proxy_pass <%= hash['origin'] %>;
-      <!-- proxy_ssl_server_name on; -->
-    }
-  <% end %>
-
-  # need this b/c setting $fallback to =404 will try #{root}=404 instead of returning a 404
-  location @404 {
-    return 404;
+    location /services/api/v1 {
+    proxy_pass http://localhost:1337;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-for $remote_addr;
+    proxy_connect_timeout 300;      
   }
 
-  # fallback proxy named match
-  <% proxies.each do |location, hash| %>
-    location @<%= location %> {
-      rewrite ^<%= location %>(.*)$ <%= hash['path'] %>/$1 break;
-      proxy_pass <%= hash['host'] %>;
-    }
-  <% end %>
+  # Include the basic h5bp config set
+  location /api/v1 {
+    proxy_pass http://localhost:1337;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-for $remote_addr;
+    proxy_connect_timeout 300;
+  }
+  
+  # Deny access to deployment folder
+  location ~ /deployment {
+    deny all;
+    return 404;
+  }
+  
+  # Deny access to hidden files
+  location ~ /\. {
+    deny all;
+    return 404;
+  } 
+  
+  location / {
+    try_files $uri $uri/ /index.html;
+    rewrite ^/(.+/)$ /index.html last;
+  }
 
-  # fallback redirects named match
-  <% redirects.each do |path, hash| %>
-    location @<%= path %> {
-      return <%= hash['status'] || 301 %> <%= hash['url'] %>;
-    }
-  <% end %>
 
   }
 }
