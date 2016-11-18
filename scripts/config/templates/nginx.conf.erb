@@ -39,18 +39,23 @@ http {
     keepalive_timeout 5;
     root <%= root %>;
 
-    # Include the basic h5bp config set
-    <% proxies.each do |location, hash| %>
-    location <%= location %> {
-      proxy_pass <%= hash['origin'] %>;
+    location /services/api/v1 {
+      proxy_pass http://collect-staging-api.collect-staging-api;
       proxy_set_header Host $host;
-      proxy_pass_request_headers on;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-for $remote_addr;
+      proxy_connect_timeout 300;      
+    }
+
+    # Include the basic h5bp config set
+    location /api/v1 {
+      proxy_pass http://collect-staging-api.collect-staging-api;
+      proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Forwarded-for $remote_addr;
       proxy_connect_timeout 300;
     }
-    <% end %>
-
+    
     location / {
       try_files $uri $uri/ /index.html;
       rewrite ^/(.+/)$ /index.html last;
